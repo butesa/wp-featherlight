@@ -64,7 +64,7 @@ class WP_Featherlight_Scripts {
 		static $suffix;
 
 		if ( null === $suffix ) {
-			$debug   = defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG;
+			$debug   = true;
 			$enabled = (bool) apply_filters( 'wp_featherlight_enable_suffix', ! $debug );
 			$suffix  = $enabled ? '.min' : '';
 		}

@@ -198,7 +198,7 @@
 --------------------------------------------- */
 .featherlight-next,
 .featherlight-previous {
-  background-color: transparent;
+  background-color: #000;
   background-repeat: no-repeat;
   -webkit-background-size: 100% auto;
           background-size: 100% auto;
@@ -217,6 +217,7 @@
           user-select: none;
   white-space: nowrap;
   width: 60px;
+  border-radius: 999px;
 }
 .featherlight-next span,
 .featherlight-previous span {

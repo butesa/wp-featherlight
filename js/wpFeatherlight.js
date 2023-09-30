@@ -142,6 +142,10 @@
 	}
 
 	$( document ).ready(function() {
+		$.featherlight.defaults.useHistory = true;
+		$.featherlight.defaults.allowWrapAround = false;
+		$.featherlight.defaults.closeLabel = 'Close';
+		$.detectSwipe.threshold = 200;
 		wpFeatherlightInit();
 	});
 })( this, jQuery );
