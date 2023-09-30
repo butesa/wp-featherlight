@@ -1,11 +1,36 @@
 /**
  * Featherlight - ultra slim jQuery lightbox
- * Version 1.7.13 - http://noelboss.github.io/featherlight/
+ * Version 1.7.14-UMD - http://noelboss.github.io/featherlight/
  *
- * Copyright 2018, Noël Raoul Bossart (http://www.noelboss.com)
+ * Copyright 2019, Noël Raoul Bossart (http://www.noelboss.com)
  * MIT Licensed.
 **/
-(function($) {
+(function (factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(['jquery'], factory);
+	} else if (typeof module === 'object' && module.exports) {
+		// Node/CommonJS
+		module.exports = function (root, jQuery) {
+			if (jQuery === undefined) {
+				// require('jQuery') returns a factory that requires window to
+				// build a jQuery instance, we normalize how we use modules
+				// that require this pattern but the window provided is a noop
+				// if it's defined (how jquery works)
+				if (typeof window !== 'undefined') {
+					jQuery = require('jquery');
+				} else {
+					jQuery = require('jquery')(root);
+				}
+			}
+			factory(jQuery);
+			return jQuery;
+		};
+	} else {
+		// Browser globals
+		factory(jQuery);
+	}
+})(function($) {
 	"use strict";
 
 	if('undefined' === typeof $) {
@@ -92,7 +117,7 @@
 	}
 
 	/* document wide key handler */
-	var eventMap = { keyup: 'onKeyUp', resize: 'onResize' };
+	var eventMap = { keyup: 'onKeyUp', resize: 'onResize', popstate: 'onPopState' };
 
 	var globalEventHandler = function(event) {
 		$.each(Featherlight.opened().reverse(), function() {
@@ -130,19 +155,22 @@
 		closeOnClick:   'background',          /* Close lightbox on click ('background', 'anywhere' or false) */
 		closeOnEsc:     true,                  /* Close lightbox when pressing esc */
 		closeIcon:      '&#10005;',            /* Close icon */
+		closeLabel:     'Close',               /* Aria label for the close button */
 		loading:        '',                    /* Content to show while initial content is loading */
 		persist:        false,                 /* If set, the content will persist and will be shown again when opened again. 'shared' is a special value when binding multiple elements for them to share the same content */
 		otherClose:     null,                  /* Selector for alternate close buttons (e.g. "a.close") */
 		beforeOpen:     $.noop,                /* Called before open. can return false to prevent opening of lightbox. Gets event as parameter, this contains all data */
 		beforeContent:  $.noop,                /* Called when content is loaded. Gets event as parameter, this contains all data */
-		beforeClose:    $.noop,                /* Called before close. can return false to prevent opening of lightbox. Gets event as parameter, this contains all data */
+		beforeClose:    $.noop,                /* Called before close. can return false to prevent closing of lightbox. Gets event as parameter, this contains all data */
 		afterOpen:      $.noop,                /* Called after open. Gets event as parameter, this contains all data */
 		afterContent:   $.noop,                /* Called after content is ready and has been set. Gets event as parameter, this contains all data */
 		afterClose:     $.noop,                /* Called after close. Gets event as parameter, this contains all data */
 		onKeyUp:        $.noop,                /* Called on key up for the frontmost featherlight */
 		onResize:       $.noop,                /* Called after new content and when a window is resized */
+		onPopState:     $.noop,                /* Called when the history entry changes (back/forward button, link click, ...) */
 		type:           null,                  /* Specify type of lightbox. If unset, it will check for the targetAttrs value. */
 		contentFilters: ['jquery', 'image', 'html', 'ajax', 'iframe', 'text'], /* List of content filters to use to determine the content */
+		useHistory:     false,                 /* Use Browser History API */
 
 		/*** methods ***/
 		/* setup iterates over a single instance of featherlight and prepares the background and binds the events */
@@ -158,7 +186,7 @@
 				$background = $(self.background || [
 					'<div class="'+css+'-loading '+css+'">',
 						'<div class="'+css+'-content">',
-							'<button class="'+css+'-close-icon '+ self.namespace + '-close" aria-label="Close">',
+							'<button class="'+css+'-close-icon '+ self.namespace + '-close" aria-label="' + self.closeLabel + '">',
 								self.closeIcon,
 							'</button>',
 							'<div class="'+self.namespace+'-inner">' + self.loading + '</div>',
@@ -274,6 +302,9 @@
 
 				if($content) {
 					opened.push(self);
+					if (self.useHistory) {
+						history.pushState({featherlightInstanceCount: Featherlight.opened().length}, '');
+					}
 
 					toggleGlobalEvents(true);
 
@@ -282,9 +313,11 @@
 
 					/* Set content and show */
 					return $.when($content)
-						.always(function($content){
-							self.setContent($content);
-							self.afterContent(event);
+						.always(function($openendContent){
+							if($openendContent) {
+								self.setContent($openendContent);
+								self.afterContent(event);
+							}
 						})
 						.then(self.$instance.promise())
 						/* Call afterOpen after fadeIn is done */
@@ -309,6 +342,9 @@
 					toggleGlobalEvents(false);
 				}
 
+				if (self.useHistory && (history.state?.featherlightInstanceCount ?? 0) > $.featherlight.opened().length) {
+					history.back();
+				}
 				self.$instance.fadeOut(self.closeSpeed,function(){
 					self.$instance.detach();
 					self.afterClose(event);
@@ -365,7 +401,7 @@
 				process: function(elem) { return this.persist !== false ? $(elem) : $(elem).clone(true); }
 			},
 			image: {
-				regex: /\.(png|jpg|jpeg|gif|tiff?|bmp|svg)(\?\S*)?$/i,
+				regex: /\.(png|jpg|jpeg|gif|tiff?|bmp|svg|webp)(\?\S*)?$/i,
 				process: function(url)  {
 					var self = this,
 						deferred = $.Deferred(),
@@ -395,7 +431,7 @@
 						if ( status !== "error" ) {
 							deferred.resolve($container.contents());
 						}
-						deferred.fail();
+						deferred.reject();
 					});
 					return deferred.promise();
 				}
@@ -624,6 +660,14 @@
 				this.$instance.find('[autofocus]:not([disabled])').focus();
 				this.onResize(event);
 				return r;
+			},
+
+			onPopState: function(_super, event){
+				if (this.useHistory && (event.originalEvent.state?.featherlightInstanceCount ?? 0) < $.featherlight.opened().length) {
+					$.featherlight.close(event);
+				}
+				
+				return _super(event);
 			}
 		}
 	});
@@ -638,4 +682,4 @@
 
 	/* bind featherlight on ready if config autoBind is set */
 	$(document).ready(function(){ Featherlight._onReady(); });
-}(jQuery));
+});

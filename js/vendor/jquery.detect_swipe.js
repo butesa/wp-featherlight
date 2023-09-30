@@ -44,11 +44,14 @@
       var dy = startY - y;
       var dir;
       var ratio = window.devicePixelRatio || 1;
-      if(Math.abs(dx) * ratio >= $.detectSwipe.threshold) {
-        dir = dx > 0 ? 'left' : 'right'
-      }
-      else if(Math.abs(dy) * ratio >= $.detectSwipe.threshold) {
-        dir = dy > 0 ? 'up' : 'down'
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if(Math.abs(dx) * ratio >= $.detectSwipe.threshold) {
+          dir = dx > 0 ? 'left' : 'right'
+        }
+      } else {
+        if(Math.abs(dy) * ratio >= $.detectSwipe.threshold) {
+          dir = dy > 0 ? 'up' : 'down'
+        }
       }
       if(dir) {
         onTouchEnd.call(this);
@@ -64,6 +67,10 @@
       isMoving = true;
       this.addEventListener('touchmove', onTouchMove, false);
       this.addEventListener('touchend', onTouchEnd, false);
+    } else {
+      // Ignore move & end events if more than one touch
+      this.removeEventListener('touchmove', onTouchMove);
+      this.removeEventListener('touchend', onTouchEnd);
     }
   }
 
@@ -72,14 +79,21 @@
   }
 
   function teardown() {
-    this.removeEventListener('touchstart', onTouchStart);
+    this.removeEventListener && this.removeEventListener('touchstart', onTouchStart);
   }
 
-  $.event.special.swipe = { setup: setup };
+  $.event.special.swipe = { setup: setup, teardown: teardown };
 
-  $.each(['left', 'up', 'down', 'right'], function () {
-    $.event.special['swipe' + this] = { setup: function(){
-      $(this).on('swipe', $.noop);
-    } };
+  $.each(['left', 'up', 'down', 'right'], function (i, name) {
+    $.event.special['swipe' + this] = {
+      setup: function(){
+        // Register a noop on a namespaced swipe event, this will call setup()
+        // See https://learn.jquery.com/events/event-basics/#namespacing-events
+        $(this).on('swipe.internal' + name, $.noop);
+      },
+      teardown: function() {
+        $(this).off('swipe.internal' + name);
+      }
+    };
   });
 }));

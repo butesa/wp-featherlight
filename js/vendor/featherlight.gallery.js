@@ -1,11 +1,36 @@
 /**
  * Featherlight Gallery – an extension for the ultra slim jQuery lightbox
- * Version 1.7.13 - http://noelboss.github.io/featherlight/
+ * Version 1.7.14-UMD - http://noelboss.github.io/featherlight/
  *
- * Copyright 2018, Noël Raoul Bossart (http://www.noelboss.com)
+ * Copyright 2019, Noël Raoul Bossart (http://www.noelboss.com)
  * MIT Licensed.
 **/
-(function($) {
+(function (factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as an anonymous module.
+		define(['jquery'], factory);
+	} else if (typeof module === 'object' && module.exports) {
+		// Node/CommonJS
+		module.exports = function (root, jQuery) {
+			if (jQuery === undefined) {
+				// require('jQuery') returns a factory that requires window to
+				// build a jQuery instance, we normalize how we use modules
+				// that require this pattern but the window provided is a noop
+				// if it's defined (how jquery works)
+				if (typeof window !== 'undefined') {
+					jQuery = require('jquery');
+				} else {
+					jQuery = require('jquery')(root);
+				}
+			}
+			factory(jQuery);
+			return jQuery;
+		};
+	} else {
+		// Browser globals
+		factory(jQuery);
+	}
+})(function($) {
 	"use strict";
 
 	var warn = function(m) {
@@ -65,9 +90,11 @@
 						.append(self.createNavigation('previous'))
 						.append(self.createNavigation('next'));
 
+					self.$instance
+						.toggleClass(self.namespace+'-no-wrap-around', !self.allowWrapAround)
 					return _super(event);
 			},
-			beforeContent: function(_super, event) {
+			afterContent: function(_super, event) {
 				var index = this.currentNavigation();
 				var len = this.slides().length;
 				this.$instance
@@ -110,6 +137,7 @@
 		nextIcon: '&#9654;',         /* Code that is used as next icon */
 		galleryFadeIn: 100,          /* fadeIn speed when image is loaded */
 		galleryFadeOut: 300,         /* fadeOut speed before image is loaded */
+		allowWrapAround: true,       /* set to false to disable previous on first image and next on last image /*
 
 		slides: function() {
 			if (this.filter) {
@@ -132,8 +160,22 @@
 				source = self.slides(),
 				len = source.length,
 				$inner = self.$instance.find('.' + self.namespace + '-inner');
-			index = ((index % len) + len) % len; /* pin index to [0, len[ */
+			// pin index to [0, len[
+			if (self.allowWrapAround) {
+				index = ((index % len) + len) % len;
+			} else {
+				if (index < 0) {
+					index = 0;
+				} else if (index >= len) {
+					index = len - 1;
+				}
+			}
 
+			if (index === self.currentNavigation()) {
+				return;
+			}
+
+			this.$instance.addClass(this.namespace+'-loading');
 			self.$currentTarget = source.eq(index);
 			self.beforeContent();
 			return $.when(
@@ -166,4 +208,4 @@
 	/* bind featherlight on ready if config autoBind is set */
 	$(document).ready(function(){ FeatherlightGallery._onReady(); });
 
-}(jQuery));
+});

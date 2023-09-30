@@ -262,3 +262,8 @@
   }
 }
 
+.featherlight-no-wrap-around.featherlight-last-slide .featherlight-next,
+.featherlight-no-wrap-around.featherlight-first-slide .featherlight-previous {
+    display: none;
+}
+
