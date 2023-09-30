@@ -143,8 +143,10 @@
 
 	$( document ).ready(function() {
 		$.featherlight.defaults.useHistory = true;
-		$.featherlight.defaults.allowWrapAround = false;
-		$.featherlight.defaults.closeLabel = 'Close';
+		$.featherlight.defaults.closeLabel = 'Schließen';
+		$.featherlightGallery.defaults.allowWrapAround = false;
+		$.featherlightGallery.defaults.previousTitle = 'zurück';
+		$.featherlightGallery.defaults.nextTitle = 'weiter';
 		$.detectSwipe.threshold = 200;
 		wpFeatherlightInit();
 	});

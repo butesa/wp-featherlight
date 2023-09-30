@@ -87,11 +87,11 @@
 					}
 
 					self.$instance.find('.'+self.namespace+'-content')
-						.append(self.createNavigation('previous'))
-						.append(self.createNavigation('next'));
+						.append(self.createNavigation('previous', self.previousTitle))
+						.append(self.createNavigation('next', self.nextTitle));
 
 					self.$instance
-						.toggleClass(self.namespace+'-no-wrap-around', !self.allowWrapAround)
+						.toggleClass(self.namespace+'-no-wrap-around', !self.allowWrapAround);
 					return _super(event);
 			},
 			afterContent: function(_super, event) {
@@ -135,6 +135,8 @@
 		/** Additional settings for Gallery **/
 		previousIcon: '&#9664;',     /* Code that is used as previous icon */
 		nextIcon: '&#9654;',         /* Code that is used as next icon */
+                previousTitle: 'previous',
+                nextTitle: 'next',
 		galleryFadeIn: 100,          /* fadeIn speed when image is loaded */
 		galleryFadeOut: 300,         /* fadeOut speed before image is loaded */
 		allowWrapAround: true,       /* set to false to disable previous on first image and next on last image */
@@ -175,7 +177,7 @@
 				return;
 			}
 
-			this.$instance.addClass(this.namespace+'-loading');
+			//this.$instance.addClass(this.namespace+'-loading');
 			self.$currentTarget = source.eq(index);
 			self.beforeContent();
 			return $.when(
@@ -188,9 +190,9 @@
 			});
 		},
 
-		createNavigation: function(target) {
+		createNavigation: function(target, title) {
 			var self = this;
-			return $('<span title="'+target+'" class="'+this.namespace+'-'+target+'"><span>'+this[target+'Icon']+'</span></span>').click(function(evt){
+			return $('<span title="'+title+'" class="'+this.namespace+'-'+target+'"><span>'+this[target+'Icon']+'</span></span>').click(function(evt){
 				$(this).trigger(target+'.'+self.namespace);
 				evt.preventDefault();
 			});
